@@ -8,8 +8,6 @@ client.on("ready", () => {
 });
 
 async function askChatGPT(text) {
-  console.log("[DEBUG] askChatGPT input:", text);
-
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is missing");
   }
@@ -30,15 +28,43 @@ async function askChatGPT(text) {
   });
 
   if (!res.ok) {
-    const errText = await res.text();
-    console.error("[DEBUG] OpenAI HTTP Error:", res.status, errText);
     throw new Error("OpenAI request failed");
   }
 
   const data = await res.json();
-  console.log("[DEBUG] OpenAI raw response:", data);
-
   return data.choices?.[0]?.message?.content ?? "no response";
+}
+
+function rollDice(input) {
+  let count = 1;
+  let sides = 6;
+
+  if (input) {
+    if (/^\d+d\d+$/.test(input)) {
+      const [c, s] = input.split("d").map(Number);
+      count = c;
+      sides = s;
+    } else if (/^\d+$/.test(input)) {
+      sides = Number(input);
+    } else {
+      return null;
+    }
+  }
+
+  if (count <= 0 || sides <= 0 || count > 100 || sides > 1000) {
+    return null;
+  }
+
+  const rolls = [];
+  let total = 0;
+
+  for (let i = 0; i < count; i++) {
+    const r = Math.floor(Math.random() * sides) + 1;
+    rolls.push(r);
+    total += r;
+  }
+
+  return { count, sides, rolls, total };
 }
 
 client.on("messageCreate", async (msg) => {
@@ -47,8 +73,6 @@ client.on("messageCreate", async (msg) => {
 
   const text = msg.content.trim();
 
-  console.log("[DEBUG] message:", text);
-
   if (text === "!ping") {
     await msg.reply("pong");
     return;
@@ -56,6 +80,22 @@ client.on("messageCreate", async (msg) => {
 
   if (text === "!スタート") {
     await msg.reply("歯車は回り始めた。止まらない。");
+    return;
+  }
+
+  // ダイスロール
+  if (text.startsWith("!dice") || text.startsWith("!roll")) {
+    const arg = text.split(" ")[1];
+    const result = rollDice(arg);
+
+    if (!result) {
+      await msg.reply("dice format error");
+      return;
+    }
+
+    await msg.reply(
+      `🎲 ${result.count}d${result.sides}\n[${result.rolls.join(", ")}]\nTotal: ${result.total}`
+    );
     return;
   }
 
@@ -69,8 +109,7 @@ client.on("messageCreate", async (msg) => {
     try {
       const reply = await askChatGPT(prompt);
       await msg.reply(reply);
-    } catch (e) {
-      console.error(e);
+    } catch {
       await msg.reply("ChatGPT connecting error");
     }
   }
