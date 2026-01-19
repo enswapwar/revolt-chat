@@ -41,21 +41,13 @@ async function askChatGPT(text) {
   return data.choices?.[0]?.message?.content ?? "no response";
 }
 
-
-  const data = await res.json();
-  console.log("[DEBUG] OpenAI raw response:", data);
-
-  return data.choices?.[0]?.message?.content ?? "no response";
-}
-
 client.on("messageCreate", async (msg) => {
   if (!msg.content) return;
   if (msg.author?.bot) return;
 
   const text = msg.content.trim();
-  const userId = msg.author._id;
 
-  console.log("[DEBUG] message from", userId, ":", text);
+  console.log("[DEBUG] message:", text);
 
   if (text === "!ping") {
     await msg.reply("pong");
@@ -68,7 +60,7 @@ client.on("messageCreate", async (msg) => {
   }
 
   if (text.startsWith("!mikan chatgpt ")) {
-    const prompt = text.replace("!mikan chatgpt ", "").trim();
+    const prompt = text.slice("!mikan chatgpt ".length).trim();
     if (!prompt) {
       await msg.reply("your text is empty.");
       return;
@@ -78,9 +70,9 @@ client.on("messageCreate", async (msg) => {
       const reply = await askChatGPT(prompt);
       await msg.reply(reply);
     } catch (e) {
+      console.error(e);
       await msg.reply("ChatGPT connecting error");
     }
-    return;
   }
 });
 
