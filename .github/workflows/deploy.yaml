@@ -1,15 +1,19 @@
-name: Auto Deploy to Render
+name: Auto Restart Render (15min)
 
 on:
-  workflow_dispatch:
   schedule:
+    # 15分おきに実行
     - cron: "*/15 * * * *"
+  workflow_dispatch: # 手動実行も可能
 
 jobs:
-  deploy:
+  restart:
     runs-on: ubuntu-latest
     steps:
       - name: Call Render Deploy Hook
-        run: curl -X POST "$RENDER_DEPLOY_HOOK"
+        run: |
+          echo "Calling Render deploy hook..."
+          curl -X POST "$RENDER_DEPLOY_HOOK"
         env:
+          # GitHub Secrets に登録した Render の Deploy Hook URL
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
